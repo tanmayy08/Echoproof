@@ -1,0 +1,17 @@
+{
+  "name": "echoproof",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Anonymous cohort feedback dApp on Midnight Network.",
+  "workspaces": [
+    "contracts/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

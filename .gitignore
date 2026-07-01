@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+
+# Local AI agent guidance
+AGENTS.md
+skills/
+
+# Midnight / Compact generated artifacts
+managed/
+*.prover
+*.verifier
+*.cjs
+
+# Local editor and OS files
+.DS_Store
+.idea/
+.vscode/

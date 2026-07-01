@@ -1,0 +1,50 @@
+pragma language_version >= 0.19;
+
+import CompactStandardLibrary;
+
+export enum CampaignStatus { active, closed }
+
+export ledger organizer: Bytes<32>;
+export ledger survey_id: Bytes<32>;
+export ledger question_set_hash: Bytes<32>;
+export ledger eligible_root: Bytes<32>;
+export ledger status: CampaignStatus;
+export ledger option_count: Uint<8>;
+export ledger response_count: Counter;
+export ledger nullifiers: Set<Bytes<32>>;
+export ledger option_0_tally: Counter;
+export ledger option_1_tally: Counter;
+export ledger option_2_tally: Counter;
+export ledger option_3_tally: Counter;
+export ledger option_4_tally: Counter;
+
+constructor(
+  initial_organizer: Bytes<32>,
+  initial_survey_id: Bytes<32>,
+  initial_question_set_hash: Bytes<32>,
+  initial_eligible_root: Bytes<32>,
+  initial_option_count: Uint<8>
+) {
+  assert(initial_option_count >= 2, "EchoProof: at least two options required");
+  assert(initial_option_count <= 5, "EchoProof: at most five options supported");
+
+  organizer = initial_organizer;
+  survey_id = initial_survey_id;
+  question_set_hash = initial_question_set_hash;
+  eligible_root = initial_eligible_root;
+  option_count = initial_option_count;
+  status = CampaignStatus.active;
+}
+
+export circuit get_response_count(): Uint<64> {
+  return response_count.read();
+}
+
+export circuit is_nullifier_used(nullifier: Bytes<32>): Boolean {
+  return nullifiers.member(nullifier);
+}
+
+export circuit close_campaign(caller: Bytes<32>): [] {
+  assert(caller == organizer, "EchoProof: only organizer can close campaign");
+  status = CampaignStatus.closed;
+}
