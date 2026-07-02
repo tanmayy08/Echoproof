@@ -9,9 +9,10 @@
   ],
   "scripts": {
     "test": "npm run test --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "build:keys": "npm run build:keys --workspace @echoproof/contracts"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.12.0"
   }
 }
