@@ -19,6 +19,22 @@ export ledger option_3_tally: Counter;
 export ledger option_4_tally: Counter;
 
 witness local_participant_secret(): Bytes<32>;
+witness local_merkle_sibling_0(): Bytes<32>;
+witness local_merkle_sibling_1(): Bytes<32>;
+witness local_merkle_sibling_2(): Bytes<32>;
+witness local_merkle_sibling_3(): Bytes<32>;
+witness local_merkle_sibling_4(): Bytes<32>;
+witness local_merkle_sibling_5(): Bytes<32>;
+witness local_merkle_sibling_6(): Bytes<32>;
+witness local_merkle_sibling_7(): Bytes<32>;
+witness local_merkle_sibling_0_is_left(): Boolean;
+witness local_merkle_sibling_1_is_left(): Boolean;
+witness local_merkle_sibling_2_is_left(): Boolean;
+witness local_merkle_sibling_3_is_left(): Boolean;
+witness local_merkle_sibling_4_is_left(): Boolean;
+witness local_merkle_sibling_5_is_left(): Boolean;
+witness local_merkle_sibling_6_is_left(): Boolean;
+witness local_merkle_sibling_7_is_left(): Boolean;
 
 constructor(
   initial_organizer: Bytes<32>,
@@ -30,11 +46,11 @@ constructor(
   assert(initial_option_count >= 2, "EchoProof: at least two options required");
   assert(initial_option_count <= 5, "EchoProof: at most five options supported");
 
-  organizer = initial_organizer;
-  survey_id = initial_survey_id;
-  question_set_hash = initial_question_set_hash;
-  eligible_root = initial_eligible_root;
-  option_count = initial_option_count;
+  organizer = disclose(initial_organizer);
+  survey_id = disclose(initial_survey_id);
+  question_set_hash = disclose(initial_question_set_hash);
+  eligible_root = disclose(initial_eligible_root);
+  option_count = disclose(initial_option_count);
   status = CampaignStatus.active;
 }
 
@@ -43,7 +59,7 @@ export circuit get_response_count(): Uint<64> {
 }
 
 export circuit is_nullifier_used(nullifier: Bytes<32>): Boolean {
-  return nullifiers.member(nullifier);
+  return nullifiers.member(disclose(nullifier));
 }
 
 export pure circuit participant_leaf(participant_secret: Bytes<32>): Bytes<32> {
@@ -61,11 +77,89 @@ export pure circuit merkle_node(left: Bytes<32>, right: Bytes<32>): Bytes<32> {
   ]);
 }
 
-export circuit get_local_participant_leaf(): Bytes<32> {
-  return participant_leaf(local_participant_secret());
+export pure circuit merkle_step(current: Bytes<32>, sibling: Bytes<32>, sibling_is_left: Boolean): Bytes<32> {
+  if (sibling_is_left) {
+    return merkle_node(sibling, current);
+  }
+  return merkle_node(current, sibling);
+}
+
+circuit get_local_membership_root(): Bytes<32> {
+  const level_0 = participant_leaf(local_participant_secret());
+  const level_1 = merkle_step(level_0, local_merkle_sibling_0(), local_merkle_sibling_0_is_left());
+  const level_2 = merkle_step(level_1, local_merkle_sibling_1(), local_merkle_sibling_1_is_left());
+  const level_3 = merkle_step(level_2, local_merkle_sibling_2(), local_merkle_sibling_2_is_left());
+  const level_4 = merkle_step(level_3, local_merkle_sibling_3(), local_merkle_sibling_3_is_left());
+  const level_5 = merkle_step(level_4, local_merkle_sibling_4(), local_merkle_sibling_4_is_left());
+  const level_6 = merkle_step(level_5, local_merkle_sibling_5(), local_merkle_sibling_5_is_left());
+  const level_7 = merkle_step(level_6, local_merkle_sibling_6(), local_merkle_sibling_6_is_left());
+  return merkle_step(level_7, local_merkle_sibling_7(), local_merkle_sibling_7_is_left());
+}
+
+export pure circuit response_nullifier(participant_secret: Bytes<32>, campaign_id: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "echoproof:nullifier:v1"),
+    participant_secret,
+    campaign_id
+  ]);
+}
+
+export circuit submit_response(selected_option: Uint<8>): [] {
+  assert(status == CampaignStatus.active, "EchoProof: campaign is closed");
+  assert(disclose(selected_option < option_count), "EchoProof: invalid option");
+
+  const proven_root = get_local_membership_root();
+  assert(disclose(proven_root == eligible_root), "EchoProof: invalid membership proof");
+
+  const nullifier = disclose(response_nullifier(local_participant_secret(), survey_id));
+  assert(!nullifiers.member(nullifier), "EchoProof: duplicate response");
+
+  nullifiers.insert(nullifier);
+  response_count.increment(1);
+  increment_tally(selected_option);
+}
+
+export circuit get_tally(option: Uint<8>): Uint<64> {
+  assert(disclose(option < option_count), "EchoProof: invalid option");
+
+  if (disclose(option == 0)) {
+    return option_0_tally.read();
+  }
+  if (disclose(option == 1)) {
+    return option_1_tally.read();
+  }
+  if (disclose(option == 2)) {
+    return option_2_tally.read();
+  }
+  if (disclose(option == 3)) {
+    return option_3_tally.read();
+  }
+  return option_4_tally.read();
+}
+
+export circuit get_total_tally(): Uint<0..92233720368547758076> {
+  return option_0_tally.read()
+    + option_1_tally.read()
+    + option_2_tally.read()
+    + option_3_tally.read()
+    + option_4_tally.read();
 }
 
 export circuit close_campaign(caller: Bytes<32>): [] {
-  assert(caller == organizer, "EchoProof: only organizer can close campaign");
+  assert(disclose(caller == organizer), "EchoProof: only organizer can close campaign");
   status = CampaignStatus.closed;
+}
+
+circuit increment_tally(option: Uint<8>): [] {
+  if (disclose(option == 0)) {
+    option_0_tally.increment(1);
+  } else if (disclose(option == 1)) {
+    option_1_tally.increment(1);
+  } else if (disclose(option == 2)) {
+    option_2_tally.increment(1);
+  } else if (disclose(option == 3)) {
+    option_3_tally.increment(1);
+  } else {
+    option_4_tally.increment(1);
+  }
 }
