@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "description": "EchoProof Compact contracts.",
+  "type": "module",
   "scripts": {
-    "build": "echo \"Compact compiler wiring will be added in a later\"",
-    "test": "echo \"Contract tests will be added in a later t\""
+    "build": "compact compile --skip-zk src/EchoProof.compact managed",
+    "build:keys": "compact compile src/EchoProof.compact managed",
+    "test": "node --test \"test/*.test.mjs\""
   }
 }
